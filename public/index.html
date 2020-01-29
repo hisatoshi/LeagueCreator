@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WLBスマブラ</title>
+    <script
+      type="text/javascript"
+      src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.js"
+    ></script>
+    <style type="text/css">
+      .current-game {
+        background-color: yellow;
+      }
+      .winner {
+        background-color: cyan;
+      }
+      .loser {
+        background-color: magenta;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <h1>WLBスマブラリーグ</h1>
+    </header>
+
+    <div id="wrapper">
+      <div id="battle-table"></div>
+      <div id="result-input-area">
+        <label for="player1-result" id="player1-name"></label>
+        <input type="text" id="player1-result" />
+        <label for="player2-result" id="player2-name"></label>
+        <input type="text" id="player2-result" />
+        <button id="next-button">次の対戦へ！！</button>
+      </div>
+    </div>
+    <script>
+      let state = {
+        players: [],
+        matchList: [],
+        matchOrder: [],
+        matchIndex: -1
+      };
+      class Match {
+        player1;
+        player2;
+        _result;
+        x;
+        y;
+        constructor(player1, player2, x, y) {
+          this.player1 = player1;
+          this.player2 = player2;
+          this._result = [-1, -1];
+          this.x = x;
+          this.y = y;
+        }
+        setResult(player1Result, player2Result) {
+          this._result[0] = player1Result;
+          this._result[1] = player2Result;
+        }
+        get result() {
+          return this._result[0] + "-" + this._result[1];
+        }
+        get resultReverse() {
+          return this._result[1] + "-" + this._result[0];
+        }
+        get winner() {
+          return parseInt(this._result[0]) < parseInt(this._result[1])
+            ? this.player2
+            : this.player1;
+        }
+        stringify() {
+          return {
+            player1: this.player1,
+            player2: this.player2,
+            _result: this._result,
+            x: this.x
+          };
+        }
+      }
+      async function init() {
+        state.players = (await axios.get("/players")).data.players;
+        state.matchList = createMatchList(state.players);
+        state.matchOrder = createMatchOrder(state.matchList);
+        setNextBattleEvent();
+        initTable(state.players, state.matchList);
+        nextEvent();
+      }
+
+      function nextEvent() {
+        const currentMatch =
+          state.matchList[state.matchOrder[state.matchIndex]];
+        if (state.matchIndex != -1) {
+          const player1Result = document.querySelector("#player1-result").value;
+          const player2Result = document.querySelector("#player2-result").value;
+          if (
+            player1Result === "" ||
+            player2Result == "" ||
+            isNaN(Number(player1Result + player2Result))
+          ) {
+            alert("値が不正です");
+            return;
+          }
+          // document.querySelector("#player1-result").value = "";
+          // document.querySelector("#player2-result").value = "";
+          currentMatch.setResult(player1Result, player2Result);
+          const player1Index = String(getPlayerIndex(currentMatch.player1));
+          const player2Index = String(getPlayerIndex(currentMatch.player2));
+          addResult2Table(
+            player1Index,
+            player2Index,
+            currentMatch.result,
+            currentMatch.player1 === currentMatch.winner
+          );
+          addResult2Table(
+            player2Index,
+            player1Index,
+            currentMatch.resultReverse,
+            currentMatch.player2 === currentMatch.winner
+          );
+          highLightMatchOff(player1Index, player2Index);
+          highLightMatchOff(player2Index, player1Index);
+          const tmp = state.matchList.map(match => match.stringify());
+          axios.post("/result", state);
+        }
+        state.matchIndex++;
+        if (state.matchIndex < state.matchOrder.length) {
+          const nextMatch = state.matchList[state.matchOrder[state.matchIndex]];
+          setNextPlayers(nextMatch.player1, nextMatch.player2);
+          const player1Index = String(getPlayerIndex(nextMatch.player1));
+          const player2Index = String(getPlayerIndex(nextMatch.player2));
+          highLightMatchOn(player1Index, player2Index);
+          highLightMatchOn(player2Index, player1Index);
+        } else {
+          gameSet();
+          return;
+        }
+      }
+
+      function initTable(players, matchList) {
+        let tableDom = "<table><tr>";
+        for (var i = -1; i < players.length; i++) {
+          if (i === -1) {
+            tableDom = tableDom + "<th>＼</th>";
+            continue;
+          }
+          tableDom = tableDom + "<th>" + players[i] + "</th>";
+        }
+        tableDom = tableDom + "</tr>";
+        for (var i = 0; i < players.length; i++) {
+          tableDom = tableDom + "<tr><th>" + players[i] + "</th>";
+          for (var j = 0; j < players.length; j++) {
+            if (i === j) {
+              tableDom =
+                tableDom +
+                "<th id='result-" +
+                String(i) +
+                String(j) +
+                "'>＼</th>";
+            } else {
+              tableDom =
+                tableDom +
+                "<th id='result-" +
+                String(i) +
+                String(j) +
+                "'></th>";
+            }
+          }
+          tableDom = tableDom + "</tr>";
+        }
+        tableDom = tableDom + "<table>";
+        document.querySelector("#battle-table").innerHTML = tableDom;
+      }
+
+      function addResult2Table(player1Index, player2Index, result, winner) {
+        const dom = document.querySelector(
+          "#result-" + player1Index + player2Index
+        );
+        dom.innerHTML = result;
+        dom.classList.add(winner ? "winner" : "loser");
+      }
+      function highLightMatchOn(player1Index, player2Index) {
+        document
+          .querySelector("#result-" + player1Index + player2Index)
+          .classList.add("current-game");
+      }
+      function highLightMatchOff(player1Index, player2Index) {
+        document
+          .querySelector("#result-" + player1Index + player2Index)
+          .classList.remove("current-game");
+      }
+      function setNextPlayers(player1Name, player2Name) {
+        document.querySelector("#player1-name").innerHTML = player1Name;
+        document.querySelector("#player2-name").innerHTML = player2Name;
+      }
+
+      function getPlayerIndex(playerName) {
+        return state.players.indexOf(playerName);
+      }
+
+      function createMatchList(players) {
+        let matchList = [];
+        for (var i = 0; i < players.length; i++) {
+          for (var j = 0; j < players.length; j++) {
+            if (j <= i) continue;
+            else matchList.push(new Match(players[i], players[j], i, j));
+          }
+        }
+        return matchList;
+      }
+
+      function createMatchOrder(matchList) {
+        const matchCount = matchList.length;
+        let matchOrder = [];
+        for (var i = 0; i < matchCount; i++) {
+          matchOrder.push(i);
+        }
+        for (var i = 0; i < 1000; i++) {
+          const ran0 = createRandomNumber(matchCount);
+          const ran1 = createRandomNumber(matchCount);
+          matchOrder = swapMatch(matchOrder, ran0, ran1);
+        }
+        return matchOrder.filter(
+          index => matchList[index].winner != "samePlayer"
+        );
+      }
+
+      function createRandomNumber(ceilNumber) {
+        return Math.floor(Math.random() * ceilNumber);
+      }
+
+      function swapMatch(list, num0, num1) {
+        const tmp = list[num0];
+        list[num0] = list[num1];
+        list[num1] = tmp;
+        return list;
+      }
+
+      function setNextBattleEvent() {
+        document
+          .querySelector("#next-button")
+          .addEventListener("click", nextEvent);
+      }
+
+      async function gameSet() {
+        const data = await axios.get("/result");
+        console.log(data);
+        let dom = "<ol>";
+        for (player of data.data.result) {
+          dom =
+            dom +
+            "<li>" +
+            player.playerName +
+            "(win:" +
+            player.winCount +
+            ", point:" +
+            player.point +
+            ")</li>";
+        }
+
+        dom = dom + "</ol>";
+
+        document.querySelector("#wrapper").innerHTML = dom;
+      }
+
+      init();
+    </script>
+  </body>
+</html>
