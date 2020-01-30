@@ -11,9 +11,11 @@
       .current-game {
         background-color: yellow;
       }
+
       .winner {
         background-color: cyan;
       }
+
       .loser {
         background-color: magenta;
       }
@@ -80,12 +82,62 @@
         }
       }
       async function init() {
-        state.players = (await axios.get("/players")).data.players;
-        state.matchList = createMatchList(state.players);
-        state.matchOrder = createMatchOrder(state.matchList);
+        const _state = (await axios.get("/repair")).data.state;
+        state.players = _state.players;
+        state.matchOrder = _state.matchOrder;
+        state.matchIndex = _state.matchIndex;
+        state.matchList = [];
+        for (var i = 0; i < _state.matchList.length; i++) {
+          const _match = _state.matchList[i];
+          let match = new Match(
+            _match.player1,
+            _match.player2,
+            _match.x,
+            _match.y
+          );
+          match.setResult(_match._result[0], _match._result[1]);
+          state.matchList.push(match);
+        }
+        console.log(state);
+
         setNextBattleEvent();
         initTable(state.players, state.matchList);
-        nextEvent();
+        repairMatch();
+      }
+
+      function repairMatch() {
+        console.log(state.matchIndex);
+        for (var i = 0; i < state.matchIndex; i++) {
+          const currentMatch = state.matchList[state.matchOrder[i]];
+          if (state.matchIndex != -1) {
+            const player1Index = String(getPlayerIndex(currentMatch.player1));
+            const player2Index = String(getPlayerIndex(currentMatch.player2));
+            addResult2Table(
+              player1Index,
+              player2Index,
+              currentMatch.result,
+              currentMatch.player1 === currentMatch.winner
+            );
+            addResult2Table(
+              player2Index,
+              player1Index,
+              currentMatch.resultReverse,
+              currentMatch.player2 === currentMatch.winner
+            );
+          }
+        }
+        if (state.matchIndex < state.matchOrder.length) {
+          const nextMatch = state.matchList[state.matchOrder[state.matchIndex]];
+          console.log(state);
+          setNextPlayers(nextMatch.player1, nextMatch.player2);
+          const player1Index = String(getPlayerIndex(nextMatch.player1));
+          const player2Index = String(getPlayerIndex(nextMatch.player2));
+          highLightMatchOn(player1Index, player2Index);
+          highLightMatchOn(player2Index, player1Index);
+        } else {
+          gameSet();
+          return;
+        }
       }
 
       function nextEvent() {

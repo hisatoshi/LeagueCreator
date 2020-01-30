@@ -43,6 +43,10 @@ router.post("/repair", function(req, res) {
   return;
 });
 
+router.get("/repair", function(req, res) {
+  res.json({ state: state });
+});
+
 router.post("/result", function(req, res) {
   state = req.body;
   fs.writeFile(
