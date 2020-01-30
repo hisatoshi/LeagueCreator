@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WLBスマブラ</title>
+    <script
+      type="text/javascript"
+      src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.js"
+    ></script>
+    <style type="text/css">
+      .current-game {
+        background-color: yellow;
+      }
+
+      .winner {
+        background-color: cyan;
+      }
+
+      .loser {
+        background-color: magenta;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <h1>WLBスマブラリーグ(修正)</h1>
+    </header>
+
+    <div id="wrapper">
+      <div id="result-input-area">
+        <select id="player1-name"></select>
+        <input type="text" id="player1-result" />
+        <select id="player2-name"></select>
+        <input type="text" id="player2-result" />
+        <button id="repair-button">修正</burepair-t
+      </div>
+    </div>
+    <script>
+      players  = []
+      async function init() {
+        setPlayers((await axios.get("/players")).data.players);
+        document.querySelector("#repair-button").addEventListener("click",repairEvent);
+      }
+
+      function setPlayers(_players) {
+        let dom = "";
+        players = _players
+        for (player of players) {
+          console.log(player);
+          dom = dom + "<option value=''" + player + "'>" + player + "</option>";
+        }
+        document.querySelector("#player1-name").innerHTML = dom;
+        document.querySelector("#player2-name").innerHTML = dom;
+      }
+
+      function repairEvent() {
+        axios.post("/repair", {
+          "player1": players[document.querySelector("#player1-name").selectedIndex],
+          "player2": players[document.querySelector("#player2-name").selectedIndex],
+          "_result": [document.querySelector("#player1-result").value, document.querySelector("#player2-result").value]
+        }, function(err, res) {
+          if (err) {console.log(err); return;}
+          console.log(res)
+
+        })
+      }
+
+      init();
+    </script>
+
+  </body>
+</html>

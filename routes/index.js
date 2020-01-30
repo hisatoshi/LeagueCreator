@@ -14,13 +14,37 @@ const players = [
   "player4",
   "player5"
 ];
+
+let state = {};
 router.get("/players", function(req, res) {
   res.json({
     players: players
   });
 });
 
+router.post("/repair", function(req, res) {
+  if (Object.keys(state).length === 0) {
+    res.json({ success: false });
+    return;
+  }
+  for (var i = 0; i < state.matchList.length; i++) {
+    const match = state.matchList[i];
+    if (
+      (match.player1 === req.body.player1 &&
+        match.player2 === req.body.player2) ||
+      (match.player1 === req.body.player2 && match.player2 === req.body.player1)
+    ) {
+      match._result = req.body._result;
+      res.json({ success: true });
+      return;
+    }
+  }
+  res.json({ success: true });
+  return;
+});
+
 router.post("/result", function(req, res) {
+  state = req.body;
   fs.writeFile(
     "results/result" + req.body.matchIndex + ".json",
     JSON.stringify(req.body),
