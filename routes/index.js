@@ -7,12 +7,12 @@ router.get("/", function(req, res, next) {
 });
 
 const players = [
-  "player0",
-  "player1",
-  "player2",
-  "player3",
-  "player4",
-  "player5"
+  "蜂屋大樹",
+  "田代真悟",
+  "高橋大",
+  "稲葉大貴",
+  "宮本佳菜子",
+  "山添久稔"
 ];
 
 let state = {};

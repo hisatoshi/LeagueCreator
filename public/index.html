@@ -7,6 +7,7 @@
       type="text/javascript"
       src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.js"
     ></script>
+    <link rel="stylesheet" type="text/css" href="stylesheets/styleList.css"></link>
     <style type="text/css">
       .current-game {
         background-color: yellow;
@@ -246,7 +247,7 @@
       async function gameSet() {
         const data = await axios.get("/result");
         console.log(data);
-        let dom = "<ol>";
+        let dom = "<ul class='count_7'>";
         for (player of data.data.result) {
           dom =
             dom +
@@ -259,7 +260,7 @@
             ")</li>";
         }
 
-        dom = dom + "</ol>";
+        dom = dom + "</ul>";
 
         document.querySelector("#wrapper").innerHTML = dom;
       }
